@@ -1,0 +1,9 @@
+{
+	"appId": "com.digimood.app",
+	"appName": "DigiMood",
+	"webDir": "dist",
+	"android": {
+		"allowMixedContent": true,
+		"backgroundColor": "#1e1e1e"
+	}
+}

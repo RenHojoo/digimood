@@ -1,0 +1,21 @@
+{
+  "name": "DigiMood",
+  "short_name": "DigiMood",
+  "description": "Track your moods and keep a journal.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1e1e1e",
+  "theme_color": "#1e1e1e",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "lifestyle", "health"],
+  "offline_enabled": true
+}

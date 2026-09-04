@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DigiMood</string>
+    <string name="title_activity_main">DigiMood</string>
+    <string name="package_name">com.digimood.app</string>
+    <string name="custom_url_scheme">com.digimood.app</string>
+</resources>

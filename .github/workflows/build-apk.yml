@@ -58,6 +58,48 @@ jobs:
               -o android/gradle/wrapper/gradle-wrapper.jar
           fi
 
+      - name: Fix Gradle config for AGP resolution
+        run: |
+          # Always overwrite settings.gradle with correct pluginManagement
+          cat > android/settings.gradle << 'GRADLE_SETTINGS'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          include ':app'
+          include ':capacitor-cordova-android-plugins'
+          project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+          apply from: 'capacitor.settings.gradle'
+          GRADLE_SETTINGS
+
+          # Always overwrite root build.gradle with plugins DSL
+          cat > android/build.gradle << 'GRADLE_BUILD'
+          // Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+          plugins {
+              id 'com.android.application' version '8.13.0' apply false
+              id 'com.android.library' version '8.13.0' apply false
+          }
+
+          apply from: "variables.gradle"
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          task clean(type: Delete) {
+              delete rootProject.buildDir
+          }
+          GRADLE_BUILD
+
       - name: Build release APK
         working-directory: ./android
         env:

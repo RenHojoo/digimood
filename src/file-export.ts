@@ -1,7 +1,7 @@
 import { registerPlugin } from '@capacitor/core';
 
 export interface FileExportOptions {
-  content: string;
+  data: string;
   filename: string;
 }
 

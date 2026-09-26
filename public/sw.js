@@ -1,4 +1,4 @@
-const CACHE_NAME = "digimood-cache-v3";
+const CACHE_NAME = "digimood-cache-v2";
 const SHELL_ASSETS = [
   "./",
   "./index.html",

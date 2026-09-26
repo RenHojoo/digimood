@@ -13,16 +13,6 @@ const buildExportFileName = (): string => {
 const isCancellation = (error: unknown): boolean =>
   error instanceof Error && /cancel|dismiss|aborted/i.test(error.message);
 
-const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
-  let timer: ReturnType<typeof setTimeout>;
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Export timed out')), ms);
-    }),
-  ]).finally(() => clearTimeout(timer));
-};
-
 const downloadBlob = (content: string, fileName: string): void => {
   const blob = new Blob([content], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
@@ -51,7 +41,7 @@ export const exportData = async (
   if (Capacitor.isNativePlatform()) {
     setIsExporting?.(true);
     try {
-      await withTimeout(FileExport.export({ content, filename: fileName }), 30000);
+      await FileExport.export({ data: content, filename: fileName });
       showMessage(`Exported ${valid.length} entries.`);
     } catch (error) {
       if (!isCancellation(error)) showMessage('Export failed. Please try again.', 'error');
@@ -84,12 +74,10 @@ export const shareData = async (
       await Filesystem.writeFile({ path: fileName, data: content, directory: Directory.Cache, encoding: Encoding.UTF8 });
       const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache });
       await Share.share({ title: fileName, text: 'DigiMood export', url: uri, dialogTitle: 'Share export...' });
-      showMessage(`Shared ${valid.length} entries.`);
     } catch (error) {
       if (!isCancellation(error)) showMessage('Share failed. Please try again.', 'error');
     } finally {
       setIsSharing?.(false);
-      Filesystem.deleteFile({ path: fileName, directory: Directory.Cache }).catch(() => {});
     }
     return;
   }

@@ -237,7 +237,7 @@ export const CalendarCarousel: React.FC<ViewCarouselProps> = ({
       return;
     }
     if (!isHorizontalSwipe.current) return;
-    if (e.cancelable) e.preventDefault();
+    e.preventDefault();
     const clamped = clampBoundaryOffset(dx, activeIndex, views.length);
     currentX.current = clamped;
     if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);

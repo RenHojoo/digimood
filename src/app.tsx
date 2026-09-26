@@ -65,7 +65,7 @@ function App() {
       const idx = VIEW_ORDER.indexOf(activeView);
       if (idx < VIEW_ORDER.length - 1) { setActiveView(VIEW_ORDER[idx + 1]); return; }
       CapacitorApp.exitApp();
-    }).then(handle => { listener = handle; }).catch(() => {});
+    }).then(handle => { listener = handle; });
     return () => { listener?.remove(); };
   }, [selectedDate, isSettingsOpen, activeView]);
 
@@ -246,9 +246,7 @@ function App() {
   );
 }
 
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Root element not found');
-createRoot(rootElement).render(<App />);
+createRoot(document.getElementById('root')!).render(<App />);
 
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {

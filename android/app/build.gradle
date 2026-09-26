@@ -8,8 +8,8 @@ android {
         applicationId "com.digimood.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode System.env.GITHUB_RUN_NUMBER ? System.env.GITHUB_RUN_NUMBER.toInteger() : 1
+        versionName System.env.GITHUB_REF_NAME ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -22,10 +22,19 @@ android {
             outputFileName = "digimood.apk"
         }
     }
+    signingConfigs {
+        release {
+            storeFile file(System.env.ANDROID_KEYSTORE ?: 'debug.keystore')
+            storePassword System.env.ANDROID_KEYSTORE_PASSWORD ?: ''
+            keyAlias System.env.ANDROID_KEY_ALIAS ?: ''
+            keyPassword System.env.ANDROID_KEY_PASSWORD ?: ''
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

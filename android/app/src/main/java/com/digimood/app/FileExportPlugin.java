@@ -12,9 +12,7 @@ import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 @CapacitorPlugin(name = "FileExport")
 public class FileExportPlugin extends Plugin {
@@ -39,20 +37,22 @@ public class FileExportPlugin extends Plugin {
 
     @PluginMethod
     public void export(PluginCall call) {
-        String data = call.getString("data");
+        String fileUri = call.getString("fileUri");
         String filename = call.getString("filename", "export.txt");
-        if (data == null) {
-            call.reject("No data provided");
+        if (fileUri == null) {
+            call.reject("No file URI provided");
             return;
         }
 
-        try {
-            File tempFile = new File(getContext().getCacheDir(), "digimood_export.tmp");
-            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                fos.write(data.getBytes(StandardCharsets.UTF_8));
-            }
-            tempFilePath = tempFile.getAbsolutePath();
+        Uri sourceUri = Uri.parse(fileUri);
+        if (sourceUri == null) {
+            call.reject("Invalid file URI");
+            return;
+        }
 
+        tempFilePath = fileUri;
+
+        try {
             Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("text/plain");
@@ -76,17 +76,17 @@ public class FileExportPlugin extends Plugin {
             return;
         }
 
-        Uri uri = result.getData().getData();
-        if (uri == null) {
+        Uri destUri = result.getData().getData();
+        if (destUri == null) {
             cleanupTempFile();
             call.reject("No file selected");
             return;
         }
 
         try {
-            File tempFile = new File(tempFilePath);
-            try (FileInputStream fis = new FileInputStream(tempFile);
-                 OutputStream os = getContext().getContentResolver().openOutputStream(uri)) {
+            Uri sourceUri = Uri.parse(tempFilePath);
+            try (FileInputStream fis = new FileInputStream(new File(sourceUri.getPath()));
+                 OutputStream os = getContext().getContentResolver().openOutputStream(destUri)) {
                 if (os == null) {
                     call.reject("Could not open destination file");
                     return;
@@ -106,7 +106,6 @@ public class FileExportPlugin extends Plugin {
 
     private void cleanupTempFile() {
         if (tempFilePath != null) {
-            new File(tempFilePath).delete();
             tempFilePath = null;
         }
     }

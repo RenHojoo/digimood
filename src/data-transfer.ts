@@ -41,7 +41,9 @@ export const exportData = async (
   if (Capacitor.isNativePlatform()) {
     setIsExporting?.(true);
     try {
-      await FileExport.export({ data: content, filename: fileName });
+      await Filesystem.writeFile({ path: fileName, data: content, directory: Directory.Cache, encoding: Encoding.UTF8 });
+      const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache });
+      await FileExport.export({ fileUri: uri, filename: fileName });
       showMessage(`Exported ${valid.length} entries.`);
     } catch (error) {
       if (!isCancellation(error)) showMessage('Export failed. Please try again.', 'error');

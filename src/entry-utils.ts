@@ -23,13 +23,16 @@ export const indexEntriesByDate = (entries: MoodEntry[]): Map<string, MoodEntry>
   return m;
 };
 
+export const normalizeForSearch = (s: string): string =>
+  s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
 export const filterEntriesBySearch = (entries: MoodEntry[], query: string, settings: Settings): MoodEntry[] => {
   if (!query.trim()) return entries;
-  const term = query.toLowerCase();
+  const term = normalizeForSearch(query);
   return entries.filter(e => {
-    const fd = formatDisplayDate(parseDate(e.date)).toLowerCase();
-    const ml = settings.customLabels[e.mood].toLowerCase();
-    return (e.diary || '').toLowerCase().includes(term) || fd.includes(term) || ml.includes(term);
+    const fd = normalizeForSearch(formatDisplayDate(parseDate(e.date)));
+    const ml = normalizeForSearch(settings.customLabels[e.mood]);
+    return normalizeForSearch(e.diary || '').includes(term) || fd.includes(term) || ml.includes(term);
   });
 };
 

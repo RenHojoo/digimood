@@ -2,6 +2,7 @@ import React from 'react';
 import type { Settings, MoodColor } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { rgbStringToHex } from './color-utils';
+import { normalizeForSearch } from './entry-utils';
 
 const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'SPAN', 'BR', 'DIV']);
 
@@ -331,14 +332,14 @@ export const renderSearchExcerpt = (
   contextBefore = 100,
   contextAfter = 120
 ): React.ReactNode => {
-  const term = searchTerm.toLowerCase();
+  const term = normalizeForSearch(searchTerm);
   if (!term) return renderDiaryContent(diary, settings);
 
   const tmp = parseHTML(diary);
   const segments: StyledSegment[] = [];
   collectStyledSegments(tmp, {}, segments, { pos: 0 }, settings);
   const plainText = segments.map(s => s.text).join('');
-  const matchIndex = plainText.toLowerCase().indexOf(term);
+  const matchIndex = normalizeForSearch(plainText).indexOf(term);
   if (matchIndex === -1) return renderDiaryContent(diary, settings, undefined, 'nosearch');
 
   const excerptStart = Math.max(0, matchIndex - contextBefore);
@@ -362,9 +363,9 @@ export const renderSearchExcerpt = (
     if (!segSlice) continue;
 
     const relEnd = cursor + segSlice.length;
-    const lowerSlice = segSlice.toLowerCase();
+    const normSlice = normalizeForSearch(segSlice);
     let lastIdx = 0;
-    let searchIdx = lowerSlice.indexOf(term);
+    let searchIdx = normSlice.indexOf(term);
 
     if (searchIdx === -1) {
       nodes.push(
@@ -385,7 +386,7 @@ export const renderSearchExcerpt = (
           )
         );
         lastIdx = searchIdx + term.length;
-        searchIdx = lowerSlice.indexOf(term, lastIdx);
+        searchIdx = normSlice.indexOf(term, lastIdx);
       }
       if (lastIdx < segSlice.length) {
         nodes.push(

@@ -9,19 +9,22 @@ on:
 permissions:
   contents: write
 
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: false
+
 jobs:
   build:
     name: Build APK
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
 
       - name: Install dependencies
@@ -42,144 +45,33 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: "platform-tools build-tools;35.0.0 build-tools;36.0.0 platforms;android-36"
+          packages: "tools platform-tools build-tools;35.0.0 build-tools;36.0.0 platforms;android-36"
 
-      - name: Ensure gradlew and wrapper jar are correct
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Compute version
+        id: ver
         run: |
-          # Always replace gradlew with the correct 8.14.3 version
-          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradlew" \
-            -o android/gradlew
-          chmod +x android/gradlew
-
-          # Download wrapper jar if missing
-          if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "gradle-wrapper.jar missing, downloading from Gradle 8.14.3 release..."
-            curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
-              -o android/gradle/wrapper/gradle-wrapper.jar
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/v}"
+            CODE=$(echo "$TAG" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | tr -d '.')
+            echo "version_code=${CODE}" >> "$GITHUB_OUTPUT"
+            echo "version_name=${TAG}" >> "$GITHUB_OUTPUT"
+          else
+            CODE=$(date +%s)
+            echo "version_code=${CODE}" >> "$GITHUB_OUTPUT"
+            echo "version_name=0.0.0-${CODE}" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Fix Gradle config for AGP resolution
-        run: |
-          # Always overwrite settings.gradle with correct pluginManagement
-          cat > android/settings.gradle << 'GRADLE_SETTINGS'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          include ':app'
-          include ':capacitor-cordova-android-plugins'
-          project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
-
-          apply from: 'capacitor.settings.gradle'
-          GRADLE_SETTINGS
-
-          # Always overwrite root build.gradle with plugins DSL
-          cat > android/build.gradle << 'GRADLE_BUILD'
-          // Top-level build file where you can add configuration options common to all sub-projects/modules.
-
-          plugins {
-              id 'com.android.application' version '8.13.0' apply false
-              id 'com.android.library' version '8.13.0' apply false
-          }
-
-          apply from: "variables.gradle"
-
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-
-          task clean(type: Delete) {
-              delete rootProject.buildDir
-          }
-          GRADLE_BUILD
-
-          # Always overwrite app/build.gradle with conditional signing fix
-          cat > android/app/build.gradle << 'GRADLE_APP_BUILD'
-          apply plugin: 'com.android.application'
-
-          android {
-              namespace = "com.digimood.app"
-              compileSdk = rootProject.ext.compileSdkVersion
-              buildToolsVersion = "36.0.0"
-              defaultConfig {
-                  applicationId "com.digimood.app"
-                  minSdkVersion rootProject.ext.minSdkVersion
-                  targetSdkVersion rootProject.ext.targetSdkVersion
-                  versionCode System.env.GITHUB_RUN_NUMBER ? System.env.GITHUB_RUN_NUMBER.toInteger() : 1
-                  versionName System.env.GITHUB_REF_NAME ?: "1.0"
-                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-                  aaptOptions {
-                      ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
-                  }
-              }
-              applicationVariants.all { variant ->
-                  variant.outputs.all {
-                      outputFileName = "digimood.apk"
-                  }
-              }
-              def keystorePath = System.env.ANDROID_KEYSTORE
-              if (keystorePath != null && new File(keystorePath).exists()) {
-                  signingConfigs {
-                      release {
-                          storeFile file(keystorePath)
-                          storePassword System.env.ANDROID_KEYSTORE_PASSWORD ?: ''
-                          keyAlias System.env.ANDROID_KEY_ALIAS ?: ''
-                          keyPassword System.env.ANDROID_KEY_PASSWORD ?: ''
-                      }
-                  }
-                  buildTypes {
-                      release {
-                          minifyEnabled false
-                          proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-                          signingConfig signingConfigs.release
-                      }
-                  }
-              } else {
-                  buildTypes {
-                      release {
-                          minifyEnabled false
-                          proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-                      }
-                  }
-              }
-          }
-
-          dependencies {
-              implementation "androidx.appcompat:appcompat:\$androidxAppCompatVersion"
-              implementation "androidx.coordinatorlayout:coordinatorlayout:\$androidxCoordinatorLayoutVersion"
-              implementation "androidx.core:core-splashscreen:\$coreSplashScreenVersion"
-              implementation project(':capacitor-android')
-              testImplementation "junit:junit:\$junitVersion"
-              androidTestImplementation "androidx.test.ext:junit:\$androidxJunitVersion"
-              androidTestImplementation "androidx.test.espresso:espresso-core:\$androidxEspressoCoreVersion"
-              implementation project(':capacitor-cordova-android-plugins')
-          }
-
-          apply from: 'capacitor.build.gradle'
-
-          try {
-              def servicesJSON = file('google-services.json')
-              if (servicesJSON.text) {
-                  apply plugin: 'com.google.gms.google-services'
-              }
-          } catch(Exception e) {
-              logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
-          }
-          GRADLE_APP_BUILD
 
       - name: Build release APK
         working-directory: ./android
         env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: ./gradlew assembleRelease
+          VERSION_CODE: ${{ steps.ver.outputs.version_code }}
+          VERSION_NAME: ${{ steps.ver.outputs.version_name }}
+        run: gradle assembleRelease
 
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
@@ -190,7 +82,6 @@ jobs:
           alias: ${{ secrets.ANDROID_KEY_ALIAS }}
           keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          buildToolsVersion: 36.0.0
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

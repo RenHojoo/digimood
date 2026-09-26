@@ -44,11 +44,14 @@ jobs:
         with:
           packages: "platform-tools build-tools;35.0.0 build-tools;36.0.0 platforms;android-36"
 
-      - name: Make gradlew executable
-        run: chmod +x android/gradlew
-
-      - name: Ensure gradle-wrapper.jar exists
+      - name: Ensure gradlew and wrapper jar are correct
         run: |
+          # Always replace gradlew with the correct 8.14.3 version
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradlew" \
+            -o android/gradlew
+          chmod +x android/gradlew
+
+          # Download wrapper jar if missing
           if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
             echo "gradle-wrapper.jar missing, downloading from Gradle 8.14.3 release..."
             curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \

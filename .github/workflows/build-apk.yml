@@ -100,6 +100,80 @@ jobs:
           }
           GRADLE_BUILD
 
+          # Always overwrite app/build.gradle with conditional signing fix
+          cat > android/app/build.gradle << 'GRADLE_APP_BUILD'
+          apply plugin: 'com.android.application'
+
+          android {
+              namespace = "com.digimood.app"
+              compileSdk = rootProject.ext.compileSdkVersion
+              buildToolsVersion = "36.0.0"
+              defaultConfig {
+                  applicationId "com.digimood.app"
+                  minSdkVersion rootProject.ext.minSdkVersion
+                  targetSdkVersion rootProject.ext.targetSdkVersion
+                  versionCode System.env.GITHUB_RUN_NUMBER ? System.env.GITHUB_RUN_NUMBER.toInteger() : 1
+                  versionName System.env.GITHUB_REF_NAME ?: "1.0"
+                  testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+                  aaptOptions {
+                      ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+                  }
+              }
+              applicationVariants.all { variant ->
+                  variant.outputs.all {
+                      outputFileName = "digimood.apk"
+                  }
+              }
+              def keystorePath = System.env.ANDROID_KEYSTORE
+              if (keystorePath != null && new File(keystorePath).exists()) {
+                  signingConfigs {
+                      release {
+                          storeFile file(keystorePath)
+                          storePassword System.env.ANDROID_KEYSTORE_PASSWORD ?: ''
+                          keyAlias System.env.ANDROID_KEY_ALIAS ?: ''
+                          keyPassword System.env.ANDROID_KEY_PASSWORD ?: ''
+                      }
+                  }
+                  buildTypes {
+                      release {
+                          minifyEnabled false
+                          proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                          signingConfig signingConfigs.release
+                      }
+                  }
+              } else {
+                  buildTypes {
+                      release {
+                          minifyEnabled false
+                          proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                      }
+                  }
+              }
+          }
+
+          dependencies {
+              implementation "androidx.appcompat:appcompat:\$androidxAppCompatVersion"
+              implementation "androidx.coordinatorlayout:coordinatorlayout:\$androidxCoordinatorLayoutVersion"
+              implementation "androidx.core:core-splashscreen:\$coreSplashScreenVersion"
+              implementation project(':capacitor-android')
+              testImplementation "junit:junit:\$junitVersion"
+              androidTestImplementation "androidx.test.ext:junit:\$androidxJunitVersion"
+              androidTestImplementation "androidx.test.espresso:espresso-core:\$androidxEspressoCoreVersion"
+              implementation project(':capacitor-cordova-android-plugins')
+          }
+
+          apply from: 'capacitor.build.gradle'
+
+          try {
+              def servicesJSON = file('google-services.json')
+              if (servicesJSON.text) {
+                  apply plugin: 'com.google.gms.google-services'
+              }
+          } catch(Exception e) {
+              logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+          }
+          GRADLE_APP_BUILD
+
       - name: Build release APK
         working-directory: ./android
         env:

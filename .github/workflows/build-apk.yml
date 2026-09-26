@@ -47,6 +47,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      - name: Ensure gradle-wrapper.jar exists
+        run: |
+          if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "gradle-wrapper.jar missing, downloading from Gradle 8.14.3 release..."
+            curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
+              -o android/gradle/wrapper/gradle-wrapper.jar
+          fi
+
       - name: Build release APK
         working-directory: ./android
         env:

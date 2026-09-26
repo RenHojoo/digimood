@@ -9,9 +9,6 @@ on:
 permissions:
   contents: write
 
-env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: false
-
 jobs:
   build:
     name: Build APK
